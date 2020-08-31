@@ -86,13 +86,46 @@ resource "aws_key_pair" "lab_keypair" {
   public_key = file(var.public_key_path)
 }
 
-resource "aws_instance" "lab_nodes" {
-  count = 3
+data "aws_ami" "latest_agent" {
+  most_recent = true
+  owners      = ["772816346052"]
 
-  instance_type          = "t3.micro"
-  ami                    = lookup(var.aws_amis, var.aws_region)
+  filter {
+    name   = "name"
+    values = [format("%s-agent*", var.name)]
+  }
+}
+
+
+data "aws_ami" "latest_server" {
+  most_recent = true
+  owners      = ["772816346052"]
+
+  filter {
+    name   = "name"
+    values = [format("%s-server*", var.name)]
+  }
+}
+
+
+resource "aws_instance" "agent" {
+  count = 2
+
+  instance_type          = "t3.xlarge"
+  ami                    = data.aws_ami.latest_agent.id
   key_name               = aws_key_pair.lab_keypair.id
   vpc_security_group_ids = [aws_security_group.lab_sg.id]
   subnet_id              = aws_subnet.lab_subnet.id
   tags                   = module.lab_labels.tags
 }
+resource "aws_instance" "server" {
+  count = 1
+
+  instance_type          = "t3.xlarge"
+  ami                    = data.aws_ami.latest_server.id
+  key_name               = aws_key_pair.lab_keypair.id
+  vpc_security_group_ids = [aws_security_group.lab_sg.id]
+  subnet_id              = aws_subnet.lab_subnet.id
+  tags                   = module.lab_labels.tags
+}
+
